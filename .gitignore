@@ -6,7 +6,7 @@
 *.swp
 .buildlog/
 .history
-
+lender/scripts/
 
 
 # Flutter repo-specific
