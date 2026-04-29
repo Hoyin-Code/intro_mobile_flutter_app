@@ -24,9 +24,8 @@ class ItemCard extends StatelessWidget {
                       fit: BoxFit.cover,
                       width: double.infinity,
                       errorBuilder: (_, __, ___) => _Placeholder(),
-                      loadingBuilder: (_, child, progress) => progress == null
-                          ? child
-                          : const _Placeholder(),
+                      loadingBuilder: (_, child, progress) =>
+                          progress == null ? child : const _Placeholder(),
                     )
                   : const _Placeholder(),
             ),
@@ -37,6 +36,10 @@ class ItemCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          ),
+          Text(
+            "Price: \$${item.pricePerDay} / day",
+            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
           ),
           Text(
             _relativeTime(item.createdAt.toDate()),
