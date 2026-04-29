@@ -37,7 +37,8 @@ BottomNavigationBarItem(
           ),
         ],
       ),
-      floatingActionButton: navigationShell.currentIndex == 0
+      floatingActionButton: navigationShell.currentIndex == 0 &&
+              GoRouterState.of(context).matchedLocation == '/items'
           ? FloatingActionButton(
               onPressed: () => context.push('/items/add'),
               child: const Icon(Icons.add),

@@ -33,35 +33,35 @@ class ItemModel {
     required this.totalReviews,
     required this.createdAt,
   });
-
+  // todo: add cloudinary for images
   factory ItemModel.fromMap(String id, Map<String, dynamic> map) => ItemModel(
-        id: id,
-        ownerId: map['ownerId'],
-        title: map['title'],
-        description: map['description'],
-        photoUrls: List<String>.from(map['photoUrls']),
-        category: map['category'],
-        condition: ItemCondition.values.byName(map['condition']),
-        pricePerDay: (map['pricePerDay'] as num).toDouble(),
-        isAvailable: map['isAvailable'] as bool,
-        address: Address.fromMap(map['address'] as Map<String, dynamic>),
-        averageRating: (map['averageRating'] as num?)?.toDouble() ?? 0.0,
-        totalReviews: (map['totalReviews'] as int?) ?? 0,
-        createdAt: map['createdAt'] as Timestamp,
-      );
+    id: id,
+    ownerId: map['ownerId'],
+    title: map['title'],
+    description: map['description'],
+    photoUrls: List<String>.from(map['photoUrls']),
+    category: map['category'],
+    condition: ItemCondition.values.byName(map['condition']),
+    pricePerDay: (map['pricePerDay'] as num).toDouble(),
+    isAvailable: map['isAvailable'] as bool,
+    address: Address.fromMap(map['address'] as Map<String, dynamic>),
+    averageRating: (map['averageRating'] as num?)?.toDouble() ?? 0.0,
+    totalReviews: (map['totalReviews'] as int?) ?? 0,
+    createdAt: map['createdAt'] as Timestamp,
+  );
 
   Map<String, dynamic> toMap() => {
-        'ownerId': ownerId,
-        'title': title,
-        'description': description,
-        'photoUrls': photoUrls,
-        'category': category,
-        'condition': condition.name,
-        'pricePerDay': pricePerDay,
-        'isAvailable': isAvailable,
-        'address': address.toMap(),
-        'averageRating': averageRating,
-        'totalReviews': totalReviews,
-        'createdAt': createdAt,
-      };
+    'ownerId': ownerId,
+    'title': title,
+    'description': description,
+    'photoUrls': photoUrls,
+    'category': category,
+    'condition': condition.name,
+    'pricePerDay': pricePerDay,
+    'isAvailable': isAvailable,
+    'address': address.toMap(),
+    'averageRating': averageRating,
+    'totalReviews': totalReviews,
+    'createdAt': createdAt,
+  };
 }

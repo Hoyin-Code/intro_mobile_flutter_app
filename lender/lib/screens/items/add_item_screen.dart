@@ -128,7 +128,7 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<ItemCondition>(
-                value: _condition,
+                initialValue: _condition,
                 decoration: const InputDecoration(labelText: 'Condition'),
                 items: ItemCondition.values
                     .map((c) => DropdownMenuItem(

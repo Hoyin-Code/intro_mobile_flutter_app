@@ -23,25 +23,26 @@ class UserModel {
   });
 
   factory UserModel.fromMap(String id, Map<String, dynamic> map) => UserModel(
-        id: id,
-        name: map['name'],
-        email: map['email'],
-        photoUrl: map['photoUrl'],
-        address: map['address'] != null
-            ? Address.fromMap(map['address'] as Map<String, dynamic>)
-            : null,
-        averageRating: (map['averageRating'] as num).toDouble(),
-        totalReviews: map['totalReviews'] as int,
-        createdAt: map['createdAt'] as Timestamp,
-      );
+    id: id,
+    name: map['name'],
+    email: map['email'],
+    photoUrl: map['photoUrl'],
+    address: map['address'] != null
+        ? Address.fromMap(map['address'] as Map<String, dynamic>)
+        : null,
+    averageRating: (map['averageRating'] as num).toDouble(),
+    totalReviews: map['totalReviews'] as int,
+    createdAt: map['createdAt'] as Timestamp,
+  );
 
   Map<String, dynamic> toMap() => {
-        'name': name,
-        'email': email,
-        'photoUrl': photoUrl,
-        'address': address?.toMap(),
-        'averageRating': averageRating,
-        'totalReviews': totalReviews,
-        'createdAt': createdAt,
-      };
+    'name': name,
+    'email': email,
+    'photoUrl': photoUrl,
+    'address': address?.toMap(),
+    'averageRating': averageRating,
+    'totalReviews': totalReviews,
+    'createdAt': createdAt,
+  };
+  // TODO: add field for multiple addresses so you can choose what location a new item has
 }

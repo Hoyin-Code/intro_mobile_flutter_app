@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../models/item_model.dart';
 import '../../providers/items_provider.dart';
@@ -15,12 +16,11 @@ class MapScreen extends ConsumerStatefulWidget {
 }
 
 class _MapScreenState extends ConsumerState<MapScreen> {
-  GoogleMapController? _mapController;
-  Position? _currentPosition;
+  final MapController _mapController = MapController();
+  LatLng? _currentPosition;
   bool _locating = true;
   String? _locationError;
 
-  // Fallback centre while GPS loads
   static const _fallback = LatLng(45.4215, -75.6972);
 
   @override
@@ -50,15 +50,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       );
 
       if (!mounted) return;
+      final latLng = LatLng(position.latitude, position.longitude);
       setState(() {
-        _currentPosition = position;
+        _currentPosition = latLng;
         _locating = false;
       });
-
-      _mapController?.animateCamera(
-        CameraUpdate.newLatLng(
-            LatLng(position.latitude, position.longitude)),
-      );
+      _mapController.move(latLng, 13);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -68,30 +65,32 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
-  Set<Marker> _buildMarkers(List<ItemModel> items) {
+  List<Marker> _buildMarkers(List<ItemModel> items) {
     return items
         .where((item) => item.isAvailable)
         .map(
           (item) => Marker(
-            markerId: MarkerId(item.id),
-            position: item.address.latLng,
-            infoWindow: InfoWindow(
-              title: item.title,
-              snippet: '\$${item.pricePerDay.toStringAsFixed(2)}/day — tap for details',
+            point: item.address.latLng,
+            width: 40,
+            height: 40,
+            child: GestureDetector(
               onTap: () => context.push('/items/${item.id}'),
+              child: Tooltip(
+                message:
+                    '${item.title} — \$${item.pricePerDay.toStringAsFixed(2)}/day',
+                child: const Icon(Icons.location_pin,
+                    color: Colors.red, size: 36),
+              ),
             ),
           ),
         )
-        .toSet();
+        .toList();
   }
 
   @override
   Widget build(BuildContext context) {
     final itemsAsync = ref.watch(itemsProvider);
-
-    final centre = _currentPosition != null
-        ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
-        : _fallback;
+    final centre = _currentPosition ?? _fallback;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Nearby Items')),
@@ -100,20 +99,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           itemsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error loading items: $e')),
-            data: (items) => GoogleMap(
-              initialCameraPosition:
-                  CameraPosition(target: centre, zoom: 13),
-              myLocationEnabled: true,
-              myLocationButtonEnabled: true,
-              markers: _buildMarkers(items),
-              onMapCreated: (controller) {
-                _mapController = controller;
-                if (_currentPosition != null) {
-                  controller.animateCamera(
-                    CameraUpdate.newLatLng(centre),
-                  );
-                }
-              },
+            data: (items) => FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(initialCenter: centre, initialZoom: 13),
+              children: [
+                TileLayer(
+                  urlTemplate:
+                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.lender',
+                ),
+                MarkerLayer(markers: _buildMarkers(items)),
+              ],
             ),
           ),
           if (_locating)
@@ -135,12 +131,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ],
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _mapController?.dispose();
-    super.dispose();
   }
 }
 
