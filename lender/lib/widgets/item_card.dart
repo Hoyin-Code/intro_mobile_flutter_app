@@ -3,10 +3,16 @@ import 'package:flutter/material.dart';
 import '../models/item_model.dart';
 
 class ItemCard extends StatelessWidget {
-  const ItemCard({super.key, required this.item, required this.onTap});
+  const ItemCard({
+    super.key,
+    required this.item,
+    required this.onTap,
+    this.distanceKm,
+  });
 
   final ItemModel item;
   final VoidCallback onTap;
+  final double? distanceKm;
 
   @override
   Widget build(BuildContext context) {
@@ -38,16 +44,23 @@ class ItemCard extends StatelessWidget {
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           ),
           Text(
-            "Price: \$${item.pricePerDay} / day",
+            "Price: \$${item.pricePerDay}/ day",
             style: TextStyle(fontSize: 11, color: Colors.grey[500]),
           ),
           Text(
-            _relativeTime(item.createdAt.toDate()),
+            distanceKm != null
+                ? _formatDistance(distanceKm!)
+                : _relativeTime(item.createdAt.toDate()),
             style: TextStyle(fontSize: 11, color: Colors.grey[500]),
           ),
         ],
       ),
     );
+  }
+
+  String _formatDistance(double km) {
+    if (km < 1) return '${(km * 1000).round()} m away';
+    return '${km.toStringAsFixed(1)} km away';
   }
 
   String _relativeTime(DateTime date) {

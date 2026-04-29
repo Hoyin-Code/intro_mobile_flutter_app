@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../models/item_model.dart';
+import '../../providers/distance_filter_provider.dart';
 import '../../providers/items_provider.dart';
+import '../../widgets/distance_filter_sheet.dart';
 import '../../widgets/item_card.dart';
 
 enum _SortOrder { alphabetical, newest, priceLow, priceHigh }
@@ -19,10 +22,24 @@ class _ItemListScreenState extends ConsumerState<ItemListScreen> {
   String? _selectedCategory;
   _SortOrder _sortOrder = _SortOrder.newest;
 
-  List<ItemModel> _applyFilters(List<ItemModel> items) {
+  static const _distance = Distance();
+
+  List<ItemModel> _applyFilters(
+      List<ItemModel> items, DistanceFilter? distanceFilter) {
     var result = _selectedCategory == null
         ? List<ItemModel>.from(items)
         : items.where((i) => i.category == _selectedCategory).toList();
+
+    if (distanceFilter != null) {
+      result = result.where((item) {
+        final km = _distance.as(
+          LengthUnit.Kilometer,
+          distanceFilter.center,
+          item.address.latLng,
+        );
+        return km <= distanceFilter.radiusKm;
+      }).toList();
+    }
 
     switch (_sortOrder) {
       case _SortOrder.alphabetical:
@@ -72,6 +89,17 @@ class _ItemListScreenState extends ConsumerState<ItemListScreen> {
     );
   }
 
+  void _showDistanceFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => const DistanceFilterSheet(),
+    );
+  }
+
   String _labelFor(_SortOrder order) => switch (order) {
         _SortOrder.alphabetical => 'Alphabetical',
         _SortOrder.newest => 'Newest first',
@@ -82,6 +110,7 @@ class _ItemListScreenState extends ConsumerState<ItemListScreen> {
   @override
   Widget build(BuildContext context) {
     final itemsAsync = ref.watch(itemsProvider);
+    final distanceFilter = ref.watch(distanceFilterProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -100,7 +129,17 @@ class _ItemListScreenState extends ConsumerState<ItemListScreen> {
         data: (items) {
           final categories = (items.map((i) => i.category).toSet().toList()
             ..sort());
-          final filtered = _applyFilters(items);
+          final filtered = _applyFilters(items, distanceFilter);
+          final distances = distanceFilter == null
+              ? null
+              : {
+                  for (final item in filtered)
+                    item.id: _distance.as(
+                      LengthUnit.Kilometer,
+                      distanceFilter.center,
+                      item.address.latLng,
+                    ),
+                };
 
           return Column(
             children: [
@@ -112,10 +151,12 @@ class _ItemListScreenState extends ConsumerState<ItemListScreen> {
               _SortLocationRow(
                 sortLabel: _sortLabel,
                 onSortTap: _showSortSheet,
+                onLocationTap: _showDistanceFilterSheet,
+                distanceFilter: distanceFilter,
               ),
               Expanded(
                 child: filtered.isEmpty
-                    ? const Center(child: Text('No items in this category.'))
+                    ? const Center(child: Text('No items found.'))
                     : GridView.builder(
                         padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
                         gridDelegate:
@@ -128,6 +169,7 @@ class _ItemListScreenState extends ConsumerState<ItemListScreen> {
                         itemCount: filtered.length,
                         itemBuilder: (context, index) => ItemCard(
                           item: filtered[index],
+                          distanceKm: distances?[filtered[index].id],
                           onTap: () =>
                               context.push('/items/${filtered[index].id}'),
                         ),
@@ -231,14 +273,22 @@ class _SortLocationRow extends StatelessWidget {
   const _SortLocationRow({
     required this.sortLabel,
     required this.onSortTap,
+    required this.onLocationTap,
+    this.distanceFilter,
   });
 
   final String sortLabel;
   final VoidCallback onSortTap;
+  final VoidCallback onLocationTap;
+  final DistanceFilter? distanceFilter;
 
   @override
   Widget build(BuildContext context) {
     final color = Theme.of(context).colorScheme.primary;
+    final isActive = distanceFilter != null;
+    final locationLabel = isActive
+        ? 'Within ${distanceFilter!.radiusKm.round()} km'
+        : 'Location';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -262,19 +312,38 @@ class _SortLocationRow extends StatelessWidget {
               ],
             ),
           ),
-          Row(
-            children: [
-              Icon(Icons.location_on_outlined, size: 18, color: color),
-              const SizedBox(width: 4),
-              Text(
-                'Wilrijk',
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
+          GestureDetector(
+            onTap: onLocationTap,
+            child: Container(
+              padding: isActive
+                  ? const EdgeInsets.symmetric(horizontal: 8, vertical: 3)
+                  : EdgeInsets.zero,
+              decoration: isActive
+                  ? BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: color.withValues(alpha: 0.4)),
+                    )
+                  : null,
+              child: Row(
+                children: [
+                  Icon(
+                    isActive ? Icons.location_on : Icons.location_on_outlined,
+                    size: 18,
+                    color: color,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    locationLabel,
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ],
       ),
