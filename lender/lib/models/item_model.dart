@@ -14,6 +14,7 @@ class ItemModel {
   final double pricePerDay;
   final bool isAvailable;
   final Address address;
+  final String? locationLabel;
   final double averageRating;
   final int totalReviews;
   final Timestamp createdAt;
@@ -29,6 +30,7 @@ class ItemModel {
     required this.pricePerDay,
     required this.isAvailable,
     required this.address,
+    this.locationLabel,
     required this.averageRating,
     required this.totalReviews,
     required this.createdAt,
@@ -45,6 +47,7 @@ class ItemModel {
     pricePerDay: (map['pricePerDay'] as num).toDouble(),
     isAvailable: map['isAvailable'] as bool,
     address: Address.fromMap(map['address'] as Map<String, dynamic>),
+    locationLabel: map['locationLabel'] as String?,
     averageRating: (map['averageRating'] as num?)?.toDouble() ?? 0.0,
     totalReviews: (map['totalReviews'] as int?) ?? 0,
     createdAt: map['createdAt'] as Timestamp,
@@ -60,6 +63,7 @@ class ItemModel {
     'pricePerDay': pricePerDay,
     'isAvailable': isAvailable,
     'address': address.toMap(),
+    if (locationLabel != null) 'locationLabel': locationLabel,
     'averageRating': averageRating,
     'totalReviews': totalReviews,
     'createdAt': createdAt,

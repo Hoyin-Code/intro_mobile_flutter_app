@@ -5,4 +5,5 @@ class FirestoreConstants {
   static const String items = 'items';
   static const String loanRequests = 'loan_requests';
   static const String reviews = 'reviews';
+  static const String locations = 'locations';
 }

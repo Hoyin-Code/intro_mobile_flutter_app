@@ -123,6 +123,10 @@ class _ItemListScreenState extends ConsumerState<ItemListScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/items/add'),
+        child: const Icon(Icons.add),
+      ),
       body: itemsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),

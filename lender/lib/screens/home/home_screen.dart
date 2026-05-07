@@ -9,8 +9,7 @@ class HomeScreen extends StatelessWidget {
   void _onTap(int index) {
     navigationShell.goBranch(
       index,
-      // Tapping the active tab again pops back to its root
-      initialLocation: index == navigationShell.currentIndex,
+      initialLocation: true,
     );
   }
 
@@ -37,13 +36,6 @@ BottomNavigationBarItem(
           ),
         ],
       ),
-      floatingActionButton: navigationShell.currentIndex == 0 &&
-              GoRouterState.of(context).matchedLocation == '/items'
-          ? FloatingActionButton(
-              onPressed: () => context.push('/items/add'),
-              child: const Icon(Icons.add),
-            )
-          : null,
     );
   }
 }
