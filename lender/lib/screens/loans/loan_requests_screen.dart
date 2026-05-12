@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../utils/date_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/loan_request_model.dart';
 import '../../providers/loan_request_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../widgets/user_avatar.dart';
 import '../../widgets/loan_status_badge.dart';
 
 class LoanRequestsScreen extends ConsumerStatefulWidget {
@@ -154,22 +155,6 @@ class _LoanRequestTile extends ConsumerWidget {
   final LoanRequestModel request;
   final bool showBorrower;
 
-  String _formatDate(DateTime d) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return '${d.day} ${months[d.month - 1]}';
-  }
-
-  String _dateRange(Timestamp start, Timestamp end) {
-    final s = start.toDate().toLocal();
-    final e = end.toDate().toLocal();
-    final endStr = s.year != e.year
-        ? '${_formatDate(e)} ${e.year}'
-        : _formatDate(e);
-    return '${_formatDate(s)} → $endStr';
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -201,18 +186,7 @@ class _LoanRequestTile extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: color.withValues(alpha: 0.15),
-                          child: Text(
-                            name.isNotEmpty ? name[0].toUpperCase() : '?',
-                            style: TextStyle(
-                              color: color,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
+                        UserAvatar(name: name, radius: 16),
                         const SizedBox(width: 10),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,7 +221,7 @@ class _LoanRequestTile extends ConsumerWidget {
                         size: 14, color: Colors.grey[500]),
                     const SizedBox(width: 6),
                     Text(
-                      _dateRange(request.startDate, request.endDate),
+                      DateFormatter.formatRange(request.startDate, request.endDate),
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[600],

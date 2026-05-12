@@ -1,5 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+
+import 'bottom_sheet_handle.dart';
+import 'bottom_sheet_padding.dart';
+import 'loading_button.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/review_model.dart';
@@ -82,28 +86,12 @@ class _AddReviewSheetState extends ConsumerState<AddReviewSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
-      ),
+    return BottomSheetPadding(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
+          const BottomSheetHandle(),
           Text(
             'Review ${widget.reviewedUserName}',
             style: Theme.of(context)
@@ -139,15 +127,10 @@ class _AddReviewSheetState extends ConsumerState<AddReviewSheet> {
             ),
           ),
           const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _isLoading ? null : _submit,
-            child: _isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Submit Review'),
+          LoadingButton(
+            label: 'Submit Review',
+            isLoading: _isLoading,
+            onPressed: _submit,
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),

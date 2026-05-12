@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/loan_request_model.dart';
+import '../../utils/date_formatter.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/items_provider.dart';
 import '../../providers/loan_request_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/add_review_sheet.dart';
 import '../../widgets/loan_status_badge.dart';
+import '../../widgets/photo_carousel.dart';
+import '../../widgets/user_rating_card.dart';
 
 class LoanDetailScreen extends ConsumerStatefulWidget {
   final String loanRequestId;
@@ -176,22 +179,7 @@ class _LoanDetailScreenState extends ConsumerState<LoanDetailScreen> {
             ),
       body: ListView(
         children: [
-          if (photoUrls.isNotEmpty)
-            SizedBox(
-              height: 220,
-              child: PageView.builder(
-                itemCount: photoUrls.length,
-                itemBuilder: (_, i) => Image.network(
-                  photoUrls[i],
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: Colors.grey[200],
-                    child: const Icon(Icons.image_outlined,
-                        color: Colors.grey, size: 40),
-                  ),
-                ),
-              ),
-            ),
+          PhotoCarousel(photoUrls: photoUrls),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -209,8 +197,7 @@ class _LoanDetailScreenState extends ConsumerState<LoanDetailScreen> {
                 _DetailRow(label: 'Item', value: itemTitle),
                 _DetailRow(
                   label: 'Period',
-                  value:
-                      '${_formatDate(request.startDate.toDate().toLocal())} → ${_formatDate(request.endDate.toDate().toLocal())}',
+                  value: DateFormatter.formatRange(request.startDate, request.endDate),
                 ),
                 _DetailRow(
                   label: 'Total',
@@ -220,7 +207,7 @@ class _LoanDetailScreenState extends ConsumerState<LoanDetailScreen> {
                 Text('Borrower',
                     style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 12),
-                _BorrowerCard(borrowerId: request.borrowerId),
+                UserRatingCard(userId: request.borrowerId),
               ],
             ),
           ),
@@ -229,72 +216,6 @@ class _LoanDetailScreenState extends ConsumerState<LoanDetailScreen> {
     );
   }
 
-  String _formatDate(DateTime d) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return '${d.day} ${months[d.month - 1]} ${d.year}';
-  }
-}
-
-class _BorrowerCard extends ConsumerWidget {
-  const _BorrowerCard({required this.borrowerId});
-
-  final String borrowerId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final userAsync = ref.watch(userDataProvider(borrowerId));
-    final color = Theme.of(context).colorScheme.primary;
-
-    return userAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const Text('Could not load borrower info.'),
-      data: (user) {
-        if (user == null) return const Text('Unknown borrower.');
-        final initial = user.name.isNotEmpty
-            ? user.name[0].toUpperCase()
-            : '?';
-        return Row(
-          children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: color.withValues(alpha: 0.15),
-              backgroundImage: user.photoUrl != null
-                  ? NetworkImage(user.photoUrl!)
-                  : null,
-              child: user.photoUrl == null
-                  ? Text(initial,
-                      style: TextStyle(
-                          color: color, fontWeight: FontWeight.w700))
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(user.name,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    const Icon(Icons.star, size: 14, color: Colors.amber),
-                    const SizedBox(width: 3),
-                    Text(
-                      '${user.averageRating.toStringAsFixed(1)}  (${user.totalReviews} review${user.totalReviews == 1 ? '' : 's'})',
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
-  }
 }
 
 class _DetailRow extends StatelessWidget {

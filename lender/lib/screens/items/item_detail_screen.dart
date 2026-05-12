@@ -5,6 +5,9 @@ import '../../providers/items_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/loan_request_sheet.dart';
+import '../../widgets/photo_carousel.dart';
+import '../../widgets/rating_stars.dart';
+import '../../widgets/user_avatar.dart';
 
 class ItemDetailScreen extends ConsumerWidget {
   final String itemId;
@@ -33,17 +36,7 @@ class ItemDetailScreen extends ConsumerWidget {
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              if (item.photoUrls.isNotEmpty)
-                SizedBox(
-                  height: 220,
-                  child: PageView.builder(
-                    itemCount: item.photoUrls.length,
-                    itemBuilder: (context, i) => Image.network(
-                      item.photoUrls[i],
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
+              PhotoCarousel(photoUrls: item.photoUrls),
               const SizedBox(height: 16),
               Text(item.title,
                   style: Theme.of(context).textTheme.headlineSmall),
@@ -51,13 +44,9 @@ class ItemDetailScreen extends ConsumerWidget {
               Text('€${item.pricePerDay.toStringAsFixed(2)} / day',
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.star, size: 16, color: Colors.amber),
-                  const SizedBox(width: 4),
-                  Text(
-                      '${item.averageRating.toStringAsFixed(1)} (${item.totalReviews} reviews)'),
-                ],
+              RatingStars(
+                averageRating: item.averageRating,
+                totalReviews: item.totalReviews,
               ),
               const SizedBox(height: 16),
               Text(item.description),
@@ -105,26 +94,15 @@ class _SellerRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(userDataProvider(ownerId));
-    final color = Theme.of(context).colorScheme.primary;
 
     return userAsync.when(
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
       data: (user) {
         if (user == null) return const SizedBox.shrink();
-        final initial = user.name.isNotEmpty ? user.name[0].toUpperCase() : '?';
         return ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: CircleAvatar(
-            radius: 20,
-            backgroundColor: color.withValues(alpha: 0.15),
-            backgroundImage:
-                user.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
-            child: user.photoUrl == null
-                ? Text(initial,
-                    style: TextStyle(color: color, fontWeight: FontWeight.w700))
-                : null,
-          ),
+          leading: UserAvatar(name: user.name, photoUrl: user.photoUrl, radius: 20),
           title: Text(user.name,
               style: const TextStyle(fontWeight: FontWeight.w600)),
           subtitle: Row(

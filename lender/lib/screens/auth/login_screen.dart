@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/error_text.dart';
+import '../../widgets/loading_button.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -87,28 +89,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   validator: (v) =>
                       v == null || v.isEmpty ? 'Enter your password' : null,
                 ),
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    _errorMessage!,
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.error),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                ErrorText(_errorMessage),
                 const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Log in'),
+                LoadingButton(
+                  label: 'Log in',
+                  isLoading: _isLoading,
+                  onPressed: _submit,
                 ),
                 const SizedBox(height: 12),
                 TextButton(

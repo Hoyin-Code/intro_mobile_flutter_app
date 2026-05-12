@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/items_provider.dart';
 import '../../providers/location_provider.dart';
 import '../../widgets/add_location_sheet.dart';
+import '../../widgets/user_avatar.dart';
 import '../../widgets/item_card.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -33,15 +34,7 @@ class ProfileScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Center(
-            child: CircleAvatar(
-              radius: 40,
-              child: Text(
-                user?.email?.substring(0, 1).toUpperCase() ?? '?',
-                style: const TextStyle(fontSize: 28),
-              ),
-            ),
-          ),
+          Center(child: UserAvatar(name: user?.email ?? '', radius: 40)),
           const SizedBox(height: 12),
           Center(child: Text(user?.email ?? '')),
           const Divider(height: 32),

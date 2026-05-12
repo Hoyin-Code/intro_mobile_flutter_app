@@ -1,6 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:flutter/material.dart';
+
+import 'bottom_sheet_padding.dart';
+import 'error_text.dart';
+import 'loading_button.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/location_model.dart';
@@ -107,13 +111,9 @@ class _AddLocationSheetState extends ConsumerState<AddLocationSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
+    return BottomSheetPadding(
+      horizontal: 16,
+      bottomExtra: 24,
       child: Form(
         key: _formKey,
         child: Column(
@@ -184,23 +184,12 @@ class _AddLocationSheetState extends ConsumerState<AddLocationSheet> {
               decoration: const InputDecoration(labelText: 'Country'),
               validator: (v) => v == null || v.isEmpty ? 'Enter a country' : null,
             ),
-            if (_errorMessage != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _errorMessage!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ],
+            ErrorText(_errorMessage),
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _save,
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Save location'),
+            LoadingButton(
+              label: 'Save location',
+              isLoading: _isLoading,
+              onPressed: _save,
             ),
           ],
         ),

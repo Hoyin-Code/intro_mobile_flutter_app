@@ -6,6 +6,8 @@ import '../../providers/items_provider.dart';
 import '../../providers/review_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/item_card.dart';
+import '../../widgets/rating_stars.dart';
+import '../../widgets/user_avatar.dart';
 import '../../widgets/review_card.dart';
 
 class UserProfileScreen extends ConsumerWidget {
@@ -18,8 +20,6 @@ class UserProfileScreen extends ConsumerWidget {
     final userAsync = ref.watch(userDataProvider(userId));
     final itemsAsync = ref.watch(itemsProvider);
     final reviewsAsync = ref.watch(reviewsProvider(userId));
-    final color = Theme.of(context).colorScheme.primary;
-
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
       body: userAsync.when(
@@ -29,29 +29,15 @@ class UserProfileScreen extends ConsumerWidget {
           if (user == null) {
             return const Center(child: Text('User not found.'));
           }
-          final initial = user.name.isNotEmpty
-              ? user.name[0].toUpperCase()
-              : '?';
-
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
               // ── Header ──────────────────────────────────────────────
               Center(
-                child: CircleAvatar(
+                child: UserAvatar(
+                  name: user.name,
+                  photoUrl: user.photoUrl,
                   radius: 40,
-                  backgroundColor: color.withValues(alpha: 0.15),
-                  backgroundImage: user.photoUrl != null
-                      ? NetworkImage(user.photoUrl!)
-                      : null,
-                  child: user.photoUrl == null
-                      ? Text(initial,
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            color: color,
-                          ))
-                      : null,
                 ),
               ),
               const SizedBox(height: 12),
@@ -66,16 +52,9 @@ class UserProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 6),
               Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.star, size: 16, color: Colors.amber),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${user.averageRating.toStringAsFixed(1)} · ${user.totalReviews} review${user.totalReviews == 1 ? '' : 's'}',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                  ],
+                child: RatingStars(
+                  averageRating: user.averageRating,
+                  totalReviews: user.totalReviews,
                 ),
               ),
               const Divider(height: 32),

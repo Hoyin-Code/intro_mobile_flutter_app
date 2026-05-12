@@ -2,6 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../utils/date_formatter.dart';
+import 'bottom_sheet_handle.dart';
+import 'bottom_sheet_padding.dart';
+import 'days_stepper.dart';
+import 'loading_button.dart';
+
 import '../models/item_model.dart';
 import '../models/loan_request_model.dart';
 import '../providers/loan_request_provider.dart';
@@ -30,14 +36,6 @@ class _LoanRequestSheetState extends ConsumerState<LoanRequestSheet> {
   DateTime get _startDate => DateTime.now();
   DateTime get _endDate => _startDate.add(Duration(days: _days));
   double get _totalPrice => _days * widget.item.pricePerDay;
-
-  String _formatDate(DateTime d) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return '${d.day} ${months[d.month - 1]} ${d.year}';
-  }
 
   Future<void> _submit() async {
     setState(() => _isLoading = true);
@@ -86,29 +84,12 @@ class _LoanRequestSheetState extends ConsumerState<LoanRequestSheet> {
   Widget build(BuildContext context) {
     final color = Theme.of(context).colorScheme.primary;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
-      ),
+    return BottomSheetPadding(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
+          const BottomSheetHandle(),
           Text(
             'Request to Borrow',
             style: Theme.of(context)
@@ -123,42 +104,11 @@ class _LoanRequestSheetState extends ConsumerState<LoanRequestSheet> {
           ),
           const SizedBox(height: 24),
 
-          // Days stepper
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton.outlined(
-                onPressed: _days > _minDays
-                    ? () => setState(() => _days--)
-                    : null,
-                icon: const Icon(Icons.remove),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    Text(
-                      '$_days',
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w700,
-                        color: color,
-                      ),
-                    ),
-                    Text(
-                      _days == 1 ? 'day' : 'days',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton.outlined(
-                onPressed: _days < _maxDays
-                    ? () => setState(() => _days++)
-                    : null,
-                icon: const Icon(Icons.add),
-              ),
-            ],
+          DaysStepper(
+            value: _days,
+            min: _minDays,
+            max: _maxDays,
+            onChanged: (val) => setState(() => _days = val),
           ),
           const SizedBox(height: 24),
 
@@ -173,7 +123,7 @@ class _LoanRequestSheetState extends ConsumerState<LoanRequestSheet> {
               children: [
                 _SummaryRow(
                   label: 'Period',
-                  value: '${_formatDate(_startDate)} → ${_formatDate(_endDate)}',
+                  value: '${DateFormatter.format(_startDate, includeYear: true)} → ${DateFormatter.format(_endDate, includeYear: true)}',
                 ),
                 const SizedBox(height: 8),
                 _SummaryRow(
@@ -191,15 +141,10 @@ class _LoanRequestSheetState extends ConsumerState<LoanRequestSheet> {
           ),
           const SizedBox(height: 24),
 
-          ElevatedButton(
-            onPressed: _isLoading ? null : _submit,
-            child: _isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Send Request'),
+          LoadingButton(
+            label: 'Send Request',
+            isLoading: _isLoading,
+            onPressed: _submit,
           ),
         ],
       ),

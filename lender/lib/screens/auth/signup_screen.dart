@@ -6,6 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../widgets/error_text.dart';
+import '../../widgets/image_source_dialog.dart';
+import '../../widgets/loading_button.dart';
+
 import '../../constants/cloudinary_constants.dart';
 import '../../providers/auth_provider.dart';
 
@@ -60,33 +64,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   void _showAvatarSourceDialog() {
-    showDialog(
-      context: context,
-      useRootNavigator: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Profile picture'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choose from gallery'),
-              onTap: () {
-                Navigator.of(dialogContext).pop();
-                _pickAvatar(ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
-              title: const Text('Take a photo'),
-              onTap: () {
-                Navigator.of(dialogContext).pop();
-                _pickAvatar(ImageSource.camera);
-              },
-            ),
-          ],
-        ),
-      ),
+    showImageSourceDialog(
+      context,
+      title: 'Profile picture',
+      onPick: _pickAvatar,
     );
   }
 
@@ -223,24 +204,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       ? 'Password must be at least 6 characters'
                       : null,
                 ),
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    _errorMessage!,
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.error),
-                  ),
-                ],
+                ErrorText(_errorMessage),
                 const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _submit,
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Sign up'),
+                LoadingButton(
+                  label: 'Sign up',
+                  isLoading: _isLoading,
+                  onPressed: _submit,
                 ),
                 const SizedBox(height: 12),
                 TextButton(

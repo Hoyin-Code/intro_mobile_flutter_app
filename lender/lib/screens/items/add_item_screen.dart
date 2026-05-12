@@ -3,6 +3,11 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:flutter/material.dart';
+
+import '../../widgets/error_text.dart';
+import '../../widgets/location_map_view.dart';
+import '../../widgets/image_source_dialog.dart';
+import '../../widgets/loading_button.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -75,33 +80,10 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
   }
 
   void _showImageSourceSheet() {
-    showDialog(
-      context: context,
-      useRootNavigator: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Add photo'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choose from gallery'),
-              onTap: () {
-                Navigator.of(dialogContext).pop();
-                _pickImage(ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
-              title: const Text('Take a photo'),
-              onTap: () {
-                Navigator.of(dialogContext).pop();
-                _pickImage(ImageSource.camera);
-              },
-            ),
-          ],
-        ),
-      ),
+    showImageSourceDialog(
+      context,
+      title: 'Add photo',
+      onPick: _pickImage,
     );
   }
 
@@ -339,67 +321,17 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SizedBox(
-                    height: 180,
-                    child: FlutterMap(
-                      mapController: _mapController,
-                      options: MapOptions(
-                        initialCenter: LatLng(
-                          _selectedLocation!.location.latitude,
-                          _selectedLocation!.location.longitude,
-                        ),
-                        initialZoom: 15,
-                        interactionOptions: const InteractionOptions(
-                          flags: InteractiveFlag.none,
-                        ),
-                      ),
-                      children: [
-                        TileLayer(
-                          urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                          userAgentPackageName: 'com.example.lender',
-                        ),
-                        MarkerLayer(
-                          markers: [
-                            Marker(
-                              point: LatLng(
-                                _selectedLocation!.location.latitude,
-                                _selectedLocation!.location.longitude,
-                              ),
-                              width: 32,
-                              height: 32,
-                              child: Icon(
-                                Icons.location_pin,
-                                color: color,
-                                size: 32,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                LocationMapView(
+                  geoPoint: _selectedLocation!.location,
+                  mapController: _mapController,
                 ),
               ],
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  _errorMessage!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ],
+              ErrorText(_errorMessage),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _submit,
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('List Item'),
+              LoadingButton(
+                label: 'List Item',
+                isLoading: _isLoading,
+                onPressed: _submit,
               ),
             ],
           ),

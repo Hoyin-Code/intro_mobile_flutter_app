@@ -25,12 +25,12 @@ class ReviewModel {
   factory ReviewModel.fromMap(String id, Map<String, dynamic> map) =>
       ReviewModel(
         id: id,
-        loanRequestId: map['loanRequestId'],
-        reviewedUserId: map['reviewedUserId'],
-        reviewerId: map['reviewerId'],
+        loanRequestId: map['loanRequestId'] ?? '',
+        reviewedUserId: map['reviewedUserId'] ?? '',
+        reviewerId: map['reviewerId'] ?? '',
         reviewerName: map['reviewerName'] ?? '',
         rating: map['rating'] as int,
-        comment: map['comment'],
+        comment: map['comment'] ?? '',
         createdAt: map['createdAt'] as Timestamp,
       );
 
