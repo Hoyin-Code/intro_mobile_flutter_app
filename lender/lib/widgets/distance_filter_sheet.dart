@@ -105,7 +105,7 @@ class _DistanceFilterSheetState extends ConsumerState<DistanceFilterSheet> {
             width: 28,
             height: 28,
             child: Tooltip(
-              message: '${item.title} · \$${item.pricePerDay.toStringAsFixed(0)}/day',
+              message: '${item.title} · €${item.pricePerDay.toStringAsFixed(0)}/day',
               child: const Icon(Icons.location_pin, color: Colors.red, size: 28),
             ),
           ),

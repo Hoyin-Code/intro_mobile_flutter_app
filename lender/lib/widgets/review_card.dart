@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import '../models/review_model.dart';
 
 class ReviewCard extends StatelessWidget {
-  final ReviewModel review;
-
   const ReviewCard({super.key, required this.review});
+
+  final ReviewModel review;
 
   @override
   Widget build(BuildContext context) {
@@ -16,17 +16,33 @@ class ReviewCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              children: List.generate(
-                5,
-                (i) => Icon(
-                  i < review.rating ? Icons.star : Icons.star_border,
-                  size: 16,
-                  color: Colors.amber,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  review.reviewerName.isNotEmpty
+                      ? review.reviewerName
+                      : 'Anonymous',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-              ),
+                Row(
+                  children: List.generate(
+                    5,
+                    (i) => Icon(
+                      i < review.rating ? Icons.star : Icons.star_border,
+                      size: 14,
+                      color: Colors.amber,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 6),
-            Text(review.comment),
+            if (review.comment.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                review.comment,
+                style: TextStyle(color: Colors.grey[700], fontSize: 13),
+              ),
+            ],
           ],
         ),
       ),

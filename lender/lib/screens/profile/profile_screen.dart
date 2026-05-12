@@ -125,6 +125,10 @@ class ProfileScreen extends ConsumerWidget {
                     child: Card(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
+                        onTap: () => context.push(
+                          '/profile/location',
+                          extra: loc,
+                        ),
                         leading: const Icon(Icons.location_on_outlined),
                         title: Text(loc.label,
                             style: const TextStyle(
@@ -135,7 +139,7 @@ class ProfileScreen extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         trailing: const Icon(
-                            Icons.swipe_left, size: 14,
+                            Icons.chevron_right, size: 18,
                             color: Colors.grey),
                       ),
                     ),

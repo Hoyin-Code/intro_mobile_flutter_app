@@ -14,7 +14,8 @@ class AuthService {
       _auth.signInWithEmailAndPassword(email: email, password: password);
 
   Future<UserCredential> signUp(
-      String email, String password, String name) async {
+      String email, String password, String name,
+      {String? photoUrl}) async {
     final credential = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
@@ -25,7 +26,7 @@ class AuthService {
         .set({
       'name': name,
       'email': email,
-      'photoUrl': null,
+      'photoUrl': photoUrl,
       'address': null,
       'averageRating': 0.0,
       'totalReviews': 0,

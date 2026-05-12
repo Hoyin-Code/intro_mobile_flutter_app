@@ -3,9 +3,11 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../constants/cloudinary_constants.dart';
 import '../../models/item_model.dart';
@@ -47,6 +49,8 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
   final _priceController = TextEditingController();
   final _picker = ImagePicker();
 
+  final MapController _mapController = MapController();
+
   ItemCondition _condition = ItemCondition.good;
   String? _selectedCategory;
   LocationModel? _selectedLocation;
@@ -65,10 +69,7 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    final image = await _picker.pickImage(
-      source: source,
-      imageQuality: 80,
-    );
+    final image = await _picker.pickImage(source: source, imageQuality: 80);
     if (image == null) return;
     setState(() => _pickedImages.add(image));
   }
@@ -227,7 +228,7 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
               TextFormField(
                 controller: _priceController,
                 decoration: const InputDecoration(
-                  labelText: 'Price per day (\$)',
+                  labelText: 'Price per day (€)',
                 ),
                 keyboardType: TextInputType.number,
                 validator: (v) {
@@ -259,7 +260,10 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                         onRemove: () => _removeImage(i),
                       ),
                     if (_pickedImages.length < _maxPhotos)
-                      _AddPhotoButton(color: color, onTap: _showImageSourceSheet),
+                      _AddPhotoButton(
+                        color: color,
+                        onTap: _showImageSourceSheet,
+                      ),
                   ],
                 ),
               ),
@@ -308,25 +312,77 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                Text(
-                                  '${loc.street}, ${loc.city}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
                               ],
                             ),
                           ),
                         )
                         .toList(),
-                    onChanged: (v) => setState(() => _selectedLocation = v),
+                    onChanged: (v) {
+                      setState(() => _selectedLocation = v);
+                      if (v != null) {
+                        final ll = LatLng(
+                          v.location.latitude,
+                          v.location.longitude,
+                        );
+                        _mapController.move(ll, 15);
+                      }
+                    },
                     validator: (_) =>
                         _selectedLocation == null ? 'Select a location' : null,
                   );
                 },
               ),
+              if (_selectedLocation != null) ...[
+                Text(
+                  '${_selectedLocation?.street}, ${_selectedLocation?.city}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    height: 180,
+                    child: FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: LatLng(
+                          _selectedLocation!.location.latitude,
+                          _selectedLocation!.location.longitude,
+                        ),
+                        initialZoom: 15,
+                        interactionOptions: const InteractionOptions(
+                          flags: InteractiveFlag.none,
+                        ),
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.example.lender',
+                        ),
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: LatLng(
+                                _selectedLocation!.location.latitude,
+                                _selectedLocation!.location.longitude,
+                              ),
+                              width: 32,
+                              height: 32,
+                              child: Icon(
+                                Icons.location_pin,
+                                color: color,
+                                size: 32,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               if (_errorMessage != null) ...[
                 const SizedBox(height: 12),
                 Text(

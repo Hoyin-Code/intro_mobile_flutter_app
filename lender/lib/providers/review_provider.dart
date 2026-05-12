@@ -5,8 +5,8 @@ import '../services/review_service.dart';
 final reviewServiceProvider =
     Provider<ReviewService>((ref) => ReviewService());
 
-// Family provider — keyed by itemId so each item gets its own stream
+// Keyed by userId — streams all reviews written about that person
 final reviewsProvider =
-    StreamProvider.family<List<ReviewModel>, String>((ref, itemId) {
-  return ref.watch(reviewServiceProvider).getReviewsForItem(itemId);
+    StreamProvider.family<List<ReviewModel>, String>((ref, userId) {
+  return ref.watch(reviewServiceProvider).getReviewsForUser(userId);
 });

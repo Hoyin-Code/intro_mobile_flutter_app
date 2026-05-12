@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/items_provider.dart';
-import '../../providers/review_provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/review_card.dart';
+import '../../providers/user_provider.dart';
+import '../../widgets/loan_request_sheet.dart';
 
 class ItemDetailScreen extends ConsumerWidget {
   final String itemId;
@@ -13,7 +14,6 @@ class ItemDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final itemsAsync = ref.watch(itemsProvider);
-    final reviewsAsync = ref.watch(reviewsProvider(itemId));
     final currentUser = ref.watch(authStateProvider).value;
 
     return itemsAsync.when(
@@ -48,7 +48,7 @@ class ItemDetailScreen extends ConsumerWidget {
               Text(item.title,
                   style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 4),
-              Text('\$${item.pricePerDay.toStringAsFixed(2)} / day',
+              Text('€${item.pricePerDay.toStringAsFixed(2)} / day',
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               Row(
@@ -65,24 +65,7 @@ class ItemDetailScreen extends ConsumerWidget {
               Text('Condition: ${item.condition.name}',
                   style: Theme.of(context).textTheme.bodySmall),
               const Divider(height: 32),
-              Text('Reviews',
-                  style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              reviewsAsync.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Text('Error loading reviews: $e'),
-                data: (reviews) {
-                  if (reviews.isEmpty) {
-                    return const Text('No reviews yet.');
-                  }
-                  return Column(
-                    children: reviews
-                        .map((r) => ReviewCard(review: r))
-                        .toList(),
-                  );
-                },
-              ),
+              _SellerRow(ownerId: item.ownerId),
             ],
           ),
           bottomNavigationBar: isOwner
@@ -91,14 +74,73 @@ class ItemDetailScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   child: ElevatedButton(
                     onPressed: item.isAvailable
-                        ? () {
-                            // TODO: open loan request bottom sheet
-                          }
+                        ? () => showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              builder: (_) => LoanRequestSheet(
+                                item: item,
+                                borrowerId: currentUser!.uid,
+                              ),
+                            )
                         : null,
                     child: Text(
                         item.isAvailable ? 'Request to Borrow' : 'Unavailable'),
                   ),
                 ),
+        );
+      },
+    );
+  }
+}
+
+class _SellerRow extends ConsumerWidget {
+  const _SellerRow({required this.ownerId});
+
+  final String ownerId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userAsync = ref.watch(userDataProvider(ownerId));
+    final color = Theme.of(context).colorScheme.primary;
+
+    return userAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (user) {
+        if (user == null) return const SizedBox.shrink();
+        final initial = user.name.isNotEmpty ? user.name[0].toUpperCase() : '?';
+        return ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: CircleAvatar(
+            radius: 20,
+            backgroundColor: color.withValues(alpha: 0.15),
+            backgroundImage:
+                user.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
+            child: user.photoUrl == null
+                ? Text(initial,
+                    style: TextStyle(color: color, fontWeight: FontWeight.w700))
+                : null,
+          ),
+          title: Text(user.name,
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: Row(
+            children: [
+              const Icon(Icons.star, size: 12, color: Colors.amber),
+              const SizedBox(width: 3),
+              Text(
+                '${user.averageRating.toStringAsFixed(1)} · ${user.totalReviews} reviews',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+          trailing: TextButton(
+            onPressed: () => context.push('/profile/user/$ownerId'),
+            child: const Text('View profile'),
+          ),
         );
       },
     );

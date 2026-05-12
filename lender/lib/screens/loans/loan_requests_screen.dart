@@ -1,7 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../models/loan_request_model.dart';
 import '../../providers/loan_request_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../widgets/loan_status_badge.dart';
 
 class LoanRequestsScreen extends ConsumerStatefulWidget {
@@ -19,7 +23,7 @@ class _LoanRequestsScreenState extends ConsumerState<LoanRequestsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -30,18 +34,21 @@ class _LoanRequestsScreenState extends ConsumerState<LoanRequestsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final incomingAsync = ref.watch(lenderRequestsProvider);
-    final outgoingAsync = ref.watch(borrowerRequestsProvider);
+    final lenderAsync   = ref.watch(lenderRequestsProvider);
+    final borrowerAsync = ref.watch(borrowerRequestsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Loans'),
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Theme.of(context).colorScheme.primary,
-          unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+          labelColor: Colors.white,
+          unselectedLabelColor:
+              Theme.of(context).colorScheme.onSurfaceVariant,
           tabs: const [
             Tab(text: 'Incoming'),
+            Tab(text: 'Pick Up'),
+            Tab(text: 'My Requests'),
             Tab(text: 'Outgoing'),
           ],
         ),
@@ -49,52 +56,218 @@ class _LoanRequestsScreenState extends ConsumerState<LoanRequestsScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          incomingAsync.when(
+          // ── Incoming: pending / rejected requests ────────────────────
+          lenderAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error: $e')),
-            data: (requests) {
+            data: (all) {
+              final requests = all
+                  .where((r) => r.status == LoanStatus.pending ||
+                      r.status == LoanStatus.rejected)
+                  .toList();
               if (requests.isEmpty) {
-                return const Center(
-                    child: Text('No incoming requests yet.'));
+                return const Center(child: Text('No incoming requests.'));
               }
               return ListView.builder(
                 itemCount: requests.length,
-                itemBuilder: (context, i) {
-                  final r = requests[i];
-                  return ListTile(
-                    title: Text('Item: ${r.itemId}'),
-                    subtitle: Text(
-                        '${r.startDate.toDate().toLocal()} → ${r.endDate.toDate().toLocal()}'),
-                    trailing: LoanStatusBadge(status: r.status),
-                    onTap: () => context.push('/loans/${r.id}'),
-                  );
-                },
+                itemBuilder: (_, i) => _LoanRequestTile(
+                  request: requests[i],
+                  showBorrower: true,
+                ),
               );
             },
           ),
-          outgoingAsync.when(
+
+          // ── Pick Up: accepted, waiting to be handed over ─────────────
+          lenderAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+            data: (all) {
+              final pickup = all
+                  .where((r) => r.status == LoanStatus.accepted)
+                  .toList();
+              if (pickup.isEmpty) {
+                return const Center(child: Text('No items ready for pick up.'));
+              }
+              return ListView.builder(
+                itemCount: pickup.length,
+                itemBuilder: (_, i) => _LoanRequestTile(
+                  request: pickup[i],
+                  showBorrower: true,
+                ),
+              );
+            },
+          ),
+
+          // ── My Requests: me requesting from others ───────────────────
+          borrowerAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error: $e')),
             data: (requests) {
               if (requests.isEmpty) {
-                return const Center(child: Text('No outgoing requests yet.'));
+                return const Center(child: Text('No outgoing requests.'));
               }
               return ListView.builder(
                 itemCount: requests.length,
-                itemBuilder: (context, i) {
-                  final r = requests[i];
-                  return ListTile(
-                    title: Text('Item: ${r.itemId}'),
-                    subtitle: Text(
-                        '${r.startDate.toDate().toLocal()} → ${r.endDate.toDate().toLocal()}'),
-                    trailing: LoanStatusBadge(status: r.status),
-                    onTap: () => context.push('/loans/${r.id}'),
-                  );
-                },
+                itemBuilder: (_, i) => _LoanRequestTile(
+                  request: requests[i],
+                  showBorrower: false,
+                ),
+              );
+            },
+          ),
+
+          // ── Outgoing: my items currently being lent out ──────────────
+          lenderAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+            data: (all) {
+              final active = all
+                  .where((r) => r.status == LoanStatus.active ||
+                      r.status == LoanStatus.returned)
+                  .toList();
+              if (active.isEmpty) {
+                return const Center(
+                    child: Text('No active lends at the moment.'));
+              }
+              return ListView.builder(
+                itemCount: active.length,
+                itemBuilder: (_, i) => _LoanRequestTile(
+                  request: active[i],
+                  showBorrower: true,
+                ),
               );
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _LoanRequestTile extends ConsumerWidget {
+  const _LoanRequestTile({
+    required this.request,
+    required this.showBorrower,
+  });
+
+  final LoanRequestModel request;
+  final bool showBorrower;
+
+  String _formatDate(DateTime d) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${d.day} ${months[d.month - 1]}';
+  }
+
+  String _dateRange(Timestamp start, Timestamp end) {
+    final s = start.toDate().toLocal();
+    final e = end.toDate().toLocal();
+    final endStr = s.year != e.year
+        ? '${_formatDate(e)} ${e.year}'
+        : _formatDate(e);
+    return '${_formatDate(s)} → $endStr';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userId    = showBorrower ? request.borrowerId : request.lenderId;
+    final nameAsync = ref.watch(userNameProvider(userId));
+    final label     = showBorrower ? 'Requested by' : 'Lending from';
+    final color     = Theme.of(context).colorScheme.primary;
+
+    final name = nameAsync.when(
+      data: (n) => n,
+      loading: () => '…',
+      error: (_, __) => 'Unknown',
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: InkWell(
+        onTap: () => context.push('/loans/${request.id}'),
+        borderRadius: BorderRadius.circular(12),
+        child: Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: color.withValues(alpha: 0.15),
+                          child: Text(
+                            name.isNotEmpty ? name[0].toUpperCase() : '?',
+                            style: TextStyle(
+                              color: color,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              label,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    LoanStatusBadge(status: request.status),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_outlined,
+                        size: 14, color: Colors.grey[500]),
+                    const SizedBox(width: 6),
+                    Text(
+                      _dateRange(request.startDate, request.endDate),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '€${request.totalPrice.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

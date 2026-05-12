@@ -13,7 +13,10 @@ import '../screens/items/item_detail_screen.dart';
 import '../screens/items/item_list_screen.dart';
 import '../screens/loans/loan_detail_screen.dart';
 import '../screens/loans/loan_requests_screen.dart';
+import '../models/location_model.dart';
+import '../screens/location/location_detail_screen.dart';
 import '../screens/profile/profile_screen.dart';
+import '../screens/profile/user_profile_screen.dart';
 
 // Converts the auth stream into a ChangeNotifier so go_router can react to
 // sign-in / sign-out events and re-evaluate the redirect guard.
@@ -105,6 +108,20 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/profile',
                 builder: (_, __) => const ProfileScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'location',
+                    builder: (_, state) => LocationDetailScreen(
+                      location: state.extra as LocationModel,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'user/:userId',
+                    builder: (_, state) => UserProfileScreen(
+                      userId: state.pathParameters['userId']!,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

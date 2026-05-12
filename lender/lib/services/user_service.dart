@@ -13,6 +13,15 @@ class UserService {
         .map((doc) => UserModel.fromMap(doc.id, doc.data()!));
   }
 
+  Future<UserModel?> getUserOnce(String userId) async {
+    final doc = await _firestore
+        .collection(FirestoreConstants.users)
+        .doc(userId)
+        .get();
+    if (!doc.exists) return null;
+    return UserModel.fromMap(doc.id, doc.data()!);
+  }
+
   Future<void> updateUser(String userId, Map<String, dynamic> data) {
     return _firestore
         .collection(FirestoreConstants.users)

@@ -77,7 +77,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               onTap: () => context.push('/items/${item.id}'),
               child: Tooltip(
                 message:
-                    '${item.title} — \$${item.pricePerDay.toStringAsFixed(2)}/day',
+                    '${item.title} — €${item.pricePerDay.toStringAsFixed(2)}/day',
                 child: const Icon(Icons.location_pin,
                     color: Colors.red, size: 36),
               ),

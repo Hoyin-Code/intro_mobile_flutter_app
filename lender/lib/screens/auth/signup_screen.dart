@@ -1,6 +1,12 @@
+import 'dart:io';
+
+import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../../constants/cloudinary_constants.dart';
 import '../../providers/auth_provider.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
@@ -15,8 +21,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _picker = ImagePicker();
+
+  XFile? _pickedAvatar;
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
@@ -26,6 +41,72 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     super.dispose();
   }
 
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return '?';
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+  }
+
+  Future<void> _pickAvatar(ImageSource source) async {
+    final image = await _picker.pickImage(
+      source: source,
+      imageQuality: 80,
+      maxWidth: 512,
+      maxHeight: 512,
+    );
+    if (image == null) return;
+    setState(() => _pickedAvatar = image);
+  }
+
+  void _showAvatarSourceDialog() {
+    showDialog(
+      context: context,
+      useRootNavigator: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Profile picture'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () {
+                Navigator.of(dialogContext).pop();
+                _pickAvatar(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Take a photo'),
+              onTap: () {
+                Navigator.of(dialogContext).pop();
+                _pickAvatar(ImageSource.camera);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _uploadAvatar() async {
+    if (_pickedAvatar == null) return null;
+    final cloudinary = CloudinaryPublic(
+      CloudinaryConstants.cloudName,
+      CloudinaryConstants.uploadPreset,
+      cache: false,
+    );
+    final response = await cloudinary.uploadFile(
+      CloudinaryFile.fromFile(
+        _pickedAvatar!.path,
+        folder: CloudinaryConstants.avatarsFolder,
+        resourceType: CloudinaryResourceType.Image,
+      ),
+    );
+    return response.secureUrl;
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -33,10 +114,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       _errorMessage = null;
     });
     try {
+      String? photoUrl;
+      try {
+        photoUrl = await _uploadAvatar();
+      } catch (_) {
+        // avatar upload failed — proceed without photo
+      }
       await ref.read(authServiceProvider).signUp(
             _emailController.text.trim(),
             _passwordController.text,
             _nameController.text.trim(),
+            photoUrl: photoUrl,
           );
     } catch (e) {
       setState(() => _errorMessage = e.toString());
@@ -47,23 +135,74 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.primary;
+    final name = _nameController.text;
+
     return Scaffold(
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Form(
             key: _formKey,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Create Account',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                    textAlign: TextAlign.center),
+                const SizedBox(height: 24),
+                Text(
+                  'Create Account',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                Center(
+                  child: GestureDetector(
+                    onTap: _showAvatarSourceDialog,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 48,
+                          backgroundColor: color.withValues(alpha: 0.15),
+                          backgroundImage: _pickedAvatar != null
+                              ? FileImage(File(_pickedAvatar!.path))
+                              : null,
+                          child: _pickedAvatar == null
+                              ? Text(
+                                  _initials(name),
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w600,
+                                    color: color,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: Colors.white, width: 2),
+                            ),
+                            padding: const EdgeInsets.all(4),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 32),
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(labelText: 'Full name'),
+                  textCapitalization: TextCapitalization.words,
                   validator: (v) =>
                       v == null || v.isEmpty ? 'Enter your name' : null,
                 ),
@@ -86,9 +225,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 ),
                 if (_errorMessage != null) ...[
                   const SizedBox(height: 12),
-                  Text(_errorMessage!,
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.error)),
+                  Text(
+                    _errorMessage!,
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.error),
+                  ),
                 ],
                 const SizedBox(height: 24),
                 ElevatedButton(
@@ -97,7 +238,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2))
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Text('Sign up'),
                 ),
                 const SizedBox(height: 12),

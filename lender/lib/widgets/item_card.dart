@@ -44,7 +44,7 @@ class ItemCard extends StatelessWidget {
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           ),
           Text(
-            "Price: \$${item.pricePerDay}/ day",
+            "Price: €${item.pricePerDay}/day",
             style: TextStyle(fontSize: 11, color: Colors.grey[500]),
           ),
           Text(

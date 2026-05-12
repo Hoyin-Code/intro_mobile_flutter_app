@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geocoding/geocoding.dart';
 
 import '../models/location_model.dart';
 import '../providers/auth_provider.dart';
@@ -19,6 +19,7 @@ class AddLocationSheet extends ConsumerStatefulWidget {
 class _AddLocationSheetState extends ConsumerState<AddLocationSheet> {
   final _formKey = GlobalKey<FormState>();
   final _labelController = TextEditingController();
+  final _numberController = TextEditingController();
   final _streetController = TextEditingController();
   final _cityController = TextEditingController();
   final _postalCodeController = TextEditingController();
@@ -30,6 +31,7 @@ class _AddLocationSheetState extends ConsumerState<AddLocationSheet> {
   @override
   void dispose() {
     _labelController.dispose();
+    _numberController.dispose();
     _streetController.dispose();
     _cityController.dispose();
     _postalCodeController.dispose();
@@ -47,19 +49,26 @@ class _AddLocationSheetState extends ConsumerState<AddLocationSheet> {
     try {
       final userId = ref.read(authStateProvider).value!.uid;
 
-      final street = _streetController.text.trim();
+      final number = _numberController.text.trim();
+      final street = '$number ${_streetController.text.trim()}';
       final city = _cityController.text.trim();
       final postalCode = _postalCodeController.text.trim();
       final country = _countryController.text.trim();
 
-      final results = await locationFromAddress(
-        '$street, $city, $postalCode, $country',
-      );
-      if (results.isEmpty) {
-        setState(() => _errorMessage = 'Address not found. Check the details and try again.');
-        return;
+      GeoPoint geoPoint;
+      try {
+        final results = await locationFromAddress(
+          '$street, $city, $postalCode, $country',
+        );
+        if (results.isNotEmpty) {
+          geoPoint = GeoPoint(
+              results.first.latitude, results.first.longitude);
+        } else {
+          geoPoint = const GeoPoint(0, 0);
+        }
+      } catch (_) {
+        geoPoint = const GeoPoint(0, 0);
       }
-      final geoPoint = GeoPoint(results.first.latitude, results.first.longitude);
 
       final draft = LocationModel(
         id: '',
@@ -126,10 +135,28 @@ class _AddLocationSheetState extends ConsumerState<AddLocationSheet> {
               validator: (v) => v == null || v.isEmpty ? 'Enter a label' : null,
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              controller: _streetController,
-              decoration: const InputDecoration(labelText: 'Street'),
-              validator: (v) => v == null || v.isEmpty ? 'Enter a street' : null,
+            Row(
+              children: [
+                SizedBox(
+                  width: 80,
+                  child: TextFormField(
+                    controller: _numberController,
+                    decoration: const InputDecoration(labelText: 'No.'),
+                    keyboardType: TextInputType.text,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Required' : null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: _streetController,
+                    decoration: const InputDecoration(labelText: 'Street'),
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Enter a street' : null,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             Row(
