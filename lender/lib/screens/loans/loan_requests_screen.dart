@@ -47,10 +47,10 @@ class _LoanRequestsScreenState extends ConsumerState<LoanRequestsScreen>
           unselectedLabelColor:
               Theme.of(context).colorScheme.onSurfaceVariant,
           tabs: const [
-            Tab(text: 'Incoming'),
-            Tab(text: 'Pick Up'),
-            Tab(text: 'My Requests'),
-            Tab(text: 'Outgoing'),
+            Tab(icon: Icon(Icons.inbox_outlined),        text: 'Inbox'),
+            Tab(icon: Icon(Icons.check_circle_outline),  text: 'Ready'),
+            Tab(icon: Icon(Icons.send_outlined),         text: 'Sent'),
+            Tab(icon: Icon(Icons.swap_horiz),            text: 'Active'),
           ],
         ),
       ),

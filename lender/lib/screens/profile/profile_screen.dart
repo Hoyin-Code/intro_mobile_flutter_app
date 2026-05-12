@@ -5,9 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/items_provider.dart';
 import '../../providers/location_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../widgets/add_location_sheet.dart';
-import '../../widgets/user_avatar.dart';
 import '../../widgets/item_card.dart';
+import '../../widgets/user_avatar.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -17,6 +18,9 @@ class ProfileScreen extends ConsumerWidget {
     final user = ref.watch(authStateProvider).value;
     final myItemsAsync = ref.watch(myItemsProvider);
     final locationsAsync = ref.watch(userLocationsProvider);
+    final firestoreUser = user != null
+        ? ref.watch(userDataProvider(user.uid)).value
+        : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -34,9 +38,15 @@ class ProfileScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Center(child: UserAvatar(name: user?.email ?? '', radius: 40)),
+          Center(
+            child: UserAvatar(
+              name: firestoreUser?.name ?? user?.email ?? '',
+              photoUrl: firestoreUser?.photoUrl,
+              radius: 40,
+            ),
+          ),
           const SizedBox(height: 12),
-          Center(child: Text(user?.email ?? '')),
+          Center(child: Text(firestoreUser?.name ?? user?.email ?? '')),
           const Divider(height: 32),
 
           // ── My Locations ──────────────────────────────────────────────
@@ -74,67 +84,25 @@ class ProfileScreen extends ConsumerWidget {
               }
               return Column(
                 children: locations.map((loc) {
-                  return Dismissible(
-                    key: ValueKey(loc.id),
-                    direction: DismissDirection.endToStart,
-                    background: Container(
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.only(right: 16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.error,
-                        borderRadius: BorderRadius.circular(12),
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      onTap: () => context.push(
+                        '/profile/location',
+                        extra: loc,
                       ),
-                      child: const Icon(Icons.delete_outline,
-                          color: Colors.white),
-                    ),
-                    confirmDismiss: (_) async {
-                      return await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Delete location?'),
-                          content: Text(
-                              'Remove "${loc.label}" from your saved locations?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () =>
-                                  Navigator.pop(ctx, false),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () =>
-                                  Navigator.pop(ctx, true),
-                              child: const Text('Delete'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    onDismissed: (_) {
-                      ref.read(locationServiceProvider).deleteLocation(
-                            user!.uid,
-                            loc.id,
-                          );
-                    },
-                    child: Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        onTap: () => context.push(
-                          '/profile/location',
-                          extra: loc,
-                        ),
-                        leading: const Icon(Icons.location_on_outlined),
-                        title: Text(loc.label,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600)),
-                        subtitle: Text(
-                          '${loc.street}, ${loc.postalCode} ${loc.city}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: const Icon(
-                            Icons.chevron_right, size: 18,
-                            color: Colors.grey),
+                      leading: const Icon(Icons.location_on_outlined),
+                      title: Text(loc.label,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600)),
+                      subtitle: Text(
+                        '${loc.street}, ${loc.postalCode} ${loc.city}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      trailing: const Icon(
+                          Icons.chevron_right, size: 18,
+                          color: Colors.grey),
                     ),
                   );
                 }).toList(),
@@ -156,13 +124,21 @@ class ProfileScreen extends ConsumerWidget {
               if (items.isEmpty) {
                 return const Text('You have no listings yet.');
               }
-              return Column(
-                children: items
-                    .map((item) => ItemCard(
-                          item: item,
-                          onTap: () => context.push('/items/${item.id}'),
-                        ))
-                    .toList(),
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 14,
+                  childAspectRatio: 0.68,
+                ),
+                itemCount: items.length,
+                itemBuilder: (_, i) => ItemCard(
+                  item: items[i],
+                  onTap: () => context.push('/items/${items[i].id}'),
+                ),
               );
             },
           ),

@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../models/location_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/items_provider.dart';
+import '../../providers/location_provider.dart';
 import '../../widgets/item_card.dart';
 
 class LocationDetailScreen extends ConsumerStatefulWidget {
@@ -51,8 +53,42 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
     final myItemsAsync = ref.watch(myItemsProvider);
     final color = Theme.of(context).colorScheme.primary;
 
+    final userId = ref.read(authStateProvider).value?.uid;
+
     return Scaffold(
-      appBar: AppBar(title: Text(loc.label)),
+      appBar: AppBar(
+        title: Text(loc.label),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Delete location?'),
+                  content: Text('Remove "${loc.label}" from your saved locations?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed == true && userId != null) {
+                await ref
+                    .read(locationServiceProvider)
+                    .deleteLocation(userId, loc.id);
+                if (mounted) context.pop();
+              }
+            },
+          ),
+        ],
+      ),
       body: Column(
         children: [
           SizedBox(
