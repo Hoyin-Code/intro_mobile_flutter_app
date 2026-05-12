@@ -65,7 +65,12 @@ class _LoanRequestsScreenState extends ConsumerState<LoanRequestsScreen>
               final requests = all
                   .where((r) => r.status == LoanStatus.pending ||
                       r.status == LoanStatus.rejected)
-                  .toList();
+                  .toList()
+                ..sort((a, b) {
+                  if (a.status == b.status) return 0;
+                  if (a.status == LoanStatus.rejected) return 1;
+                  return -1;
+                });
               if (requests.isEmpty) {
                 return const Center(child: Text('No incoming requests.'));
               }

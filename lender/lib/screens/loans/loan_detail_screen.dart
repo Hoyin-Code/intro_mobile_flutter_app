@@ -22,51 +22,80 @@ class LoanDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _LoanDetailScreenState extends ConsumerState<LoanDetailScreen> {
-  Future<void> _updateStatus(LoanRequestModel request, LoanStatus status) async {
-    await ref
-        .read(loanRequestServiceProvider)
-        .updateStatus(request.id, status);
+  Future<void> _updateStatus(
+    LoanRequestModel request,
+    LoanStatus status,
+  ) async {
+    await ref.read(loanRequestServiceProvider).updateStatus(request.id, status);
+    if (status == LoanStatus.active) {
+      await ref.read(itemServiceProvider).updateAvailability(
+            request.itemId,
+            isAvailable: false,
+          );
+    } else if (status == LoanStatus.returned) {
+      await ref.read(itemServiceProvider).updateAvailability(
+            request.itemId,
+            isAvailable: true,
+          );
+    }
   }
 
-  Future<void> _confirmReturn(LoanRequestModel request,
-      {required String reviewerName, required String borrowerName}) async {
-    final confirmed = await showDialog<bool>(
+  Future<bool> _confirm({
+    required String title,
+    required String content,
+    String confirmLabel = 'Confirm',
+  }) async {
+    final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirm return'),
-        content: const Text('Has the item been physically returned to you?'),
+        title: Text(title),
+        content: Text(content),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Not yet'),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Yes, returned'),
+            child: Text(confirmLabel),
           ),
         ],
       ),
     );
-    if (confirmed != true || !mounted) return;
+    return result == true;
+  }
+
+  Future<void> _confirmReturn(
+    LoanRequestModel request, {
+    required String reviewerName,
+    required String borrowerName,
+  }) async {
+    final confirmed = await _confirm(
+      title: 'Confirm return',
+      content: 'Has the item been physically returned to you?',
+      confirmLabel: 'Yes, returned',
+    );
+    if (!confirmed || !mounted) return;
     await _updateStatus(request, LoanStatus.returned);
     if (!mounted) return;
-    _showReviewSheet(
+    await _showReviewSheet(
       loanRequestId: request.id,
       reviewedUserId: request.borrowerId,
       reviewedUserName: borrowerName,
       reviewerId: request.lenderId,
       reviewerName: reviewerName,
     );
+    if (mounted) context.pop();
   }
 
-  void _showReviewSheet({
+  Future<void> _showReviewSheet({
     required String loanRequestId,
     required String reviewedUserId,
     required String reviewedUserName,
     required String reviewerId,
     required String reviewerName,
   }) {
-    showModalBottomSheet(
+    return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -93,23 +122,27 @@ class _LoanDetailScreenState extends ConsumerState<LoanDetailScreen> {
       ...outgoingAsync.value ?? [],
     ];
 
-    final request =
-        allRequests.where((r) => r.id == widget.loanRequestId).firstOrNull;
+    final request = allRequests
+        .where((r) => r.id == widget.loanRequestId)
+        .firstOrNull;
 
     if (request == null) {
-      return const Scaffold(
-          body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final isLender = currentUser?.uid == request.lenderId;
-    final item = ref.watch(itemsProvider).value
+    final item = ref
+        .watch(itemsProvider)
+        .value
         ?.where((i) => i.id == request.itemId)
         .firstOrNull;
     final itemTitle = item?.title ?? '...';
     final photoUrls = item?.photoUrls ?? [];
 
-    final lenderName = ref.watch(userDataProvider(request.lenderId)).value?.name ?? '';
-    final borrowerName = ref.watch(userDataProvider(request.borrowerId)).value?.name ?? '';
+    final lenderName =
+        ref.watch(userDataProvider(request.lenderId)).value?.name ?? '';
+    final borrowerName =
+        ref.watch(userDataProvider(request.borrowerId)).value?.name ?? '';
 
     Widget? actionButton;
     if (isLender && request.status == LoanStatus.pending) {
@@ -117,7 +150,17 @@ class _LoanDetailScreenState extends ConsumerState<LoanDetailScreen> {
         children: [
           Expanded(
             child: OutlinedButton(
-              onPressed: () => _updateStatus(request, LoanStatus.rejected),
+              onPressed: () async {
+                final router = GoRouter.of(context);
+                final ok = await _confirm(
+                  title: 'Reject request?',
+                  content: 'The borrower will be notified.',
+                  confirmLabel: 'Reject',
+                );
+                if (!ok) return;
+                await _updateStatus(request, LoanStatus.rejected);
+                if (mounted) router.pop();
+              },
               child: const Text('Reject'),
             ),
           ),
@@ -125,8 +168,15 @@ class _LoanDetailScreenState extends ConsumerState<LoanDetailScreen> {
           Expanded(
             child: ElevatedButton(
               onPressed: () async {
+                final router = GoRouter.of(context);
+                final ok = await _confirm(
+                  title: 'Accept request?',
+                  content: 'The borrower will be notified.',
+                  confirmLabel: 'Accept',
+                );
+                if (!ok) return;
                 await _updateStatus(request, LoanStatus.accepted);
-                if (mounted) context.pop();
+                if (mounted) router.pop();
               },
               child: const Text('Accept'),
             ),
@@ -135,9 +185,19 @@ class _LoanDetailScreenState extends ConsumerState<LoanDetailScreen> {
       );
     } else if (isLender && request.status == LoanStatus.accepted) {
       actionButton = SizedBox(
-        width: double.infinity,
+        width: double.infinity + 1,
         child: ElevatedButton(
-          onPressed: () => _updateStatus(request, LoanStatus.active),
+          onPressed: () async {
+            final router = GoRouter.of(context);
+            final ok = await _confirm(
+              title: 'Mark as active?',
+              content: 'Confirm the item has been handed to the borrower.',
+              confirmLabel: 'Mark Active',
+            );
+            if (!ok) return;
+            await _updateStatus(request, LoanStatus.active);
+            if (mounted) router.pop();
+          },
           child: const Text('Mark as Active'),
         ),
       );
@@ -188,8 +248,10 @@ class _LoanDetailScreenState extends ConsumerState<LoanDetailScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Status',
-                        style: Theme.of(context).textTheme.titleSmall),
+                    Text(
+                      'Status',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
                     LoanStatusBadge(status: request.status),
                   ],
                 ),
@@ -197,17 +259,29 @@ class _LoanDetailScreenState extends ConsumerState<LoanDetailScreen> {
                 _DetailRow(label: 'Item', value: itemTitle),
                 _DetailRow(
                   label: 'Period',
-                  value: DateFormatter.formatRange(request.startDate, request.endDate),
+                  value: DateFormatter.formatRange(
+                    request.startDate,
+                    request.endDate,
+                  ),
                 ),
                 _DetailRow(
                   label: 'Total',
                   value: '€${request.totalPrice.toStringAsFixed(2)}',
                 ),
                 const Divider(height: 24),
-                Text('Borrower',
-                    style: Theme.of(context).textTheme.titleSmall),
+                Text('Borrower', style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 12),
-                UserRatingCard(userId: request.borrowerId),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(child: UserRatingCard(userId: request.borrowerId)),
+                    TextButton(
+                      onPressed: () =>
+                          context.push('/profile/user/${request.borrowerId}'),
+                      child: const Text('View profile'),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -215,7 +289,6 @@ class _LoanDetailScreenState extends ConsumerState<LoanDetailScreen> {
       ),
     );
   }
-
 }
 
 class _DetailRow extends StatelessWidget {
@@ -233,8 +306,7 @@ class _DetailRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 80,
-            child: Text(label,
-                style: Theme.of(context).textTheme.bodySmall),
+            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
           ),
           Expanded(child: Text(value)),
         ],

@@ -97,20 +97,33 @@ class _DistanceFilterSheetState extends ConsumerState<DistanceFilterSheet> {
   }
 
   List<Marker> _buildItemMarkers(List<ItemModel> items) {
-    return items
-        .where((item) => item.isAvailable)
-        .map(
-          (item) => Marker(
-            point: item.address.latLng,
-            width: 28,
-            height: 28,
-            child: Tooltip(
-              message: '${item.title} · €${item.pricePerDay.toStringAsFixed(0)}/day',
-              child: const Icon(Icons.location_pin, color: Colors.red, size: 28),
-            ),
-          ),
-        )
-        .toList();
+    // Group available items by exact coordinates
+    final groups = <String, List<ItemModel>>{};
+    for (final item in items.where((i) => i.isAvailable)) {
+      final key =
+          '${item.address.location.latitude},${item.address.location.longitude}';
+      groups.putIfAbsent(key, () => []).add(item);
+    }
+
+    return groups.entries.map((entry) {
+      final groupItems = entry.value;
+      final first = groupItems.first;
+      final label = (first.locationLabel != null &&
+              first.locationLabel!.isNotEmpty)
+          ? first.locationLabel!
+          : first.address.city;
+      final count = groupItems.length;
+
+      return Marker(
+        point: first.address.latLng,
+        width: 28,
+        height: 28,
+        child: Tooltip(
+          message: '$label · $count ${count == 1 ? 'item' : 'items'}',
+          child: const Icon(Icons.location_pin, color: Colors.red, size: 28),
+        ),
+      );
+    }).toList();
   }
 
   @override
